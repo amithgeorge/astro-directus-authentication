@@ -1,12 +1,8 @@
-import cookie from "cookie";
+import * as authCookie from "$src/utils/auth-cookie.js";
 
 export async function post({ request, params }) {
-	const removeCookieStr = cookie.serialize("auth_session", "", {
-		maxAge: -1,
-	});
-
 	const home = new URL("/", request.url);
 	const response = Response.redirect(home, 302);
-	response.headers.append("Set-Cookie", removeCookieStr);
+	authCookie.unset(response);
 	return response;
 }

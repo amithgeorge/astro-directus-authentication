@@ -1,73 +1,46 @@
 ---
 import DefaultLayout from "../layouts/DefaultLayout.astro";
-import cookie from "cookie";
 import {
 	getDirectusAdminClient,
 	getDirectusUserClient,
+	getStoredAuthInfo,
 } from "$src/utils/directus-client.js";
+import * as authCookie from "$src/utils/auth-cookie.js";
 
 // const directusAdmin = await getDirectusAdminClient();
 // const admin = await directusAdmin.users.me.read();
 
 async function currentDirectusUser(request, response) {
-	let authInfo;
+	const authInfo = authCookie.read(request);
+	if (!authInfo) {
+		return {};
+	}
+
 	try {
-		const authInfoStr = cookie.parse(
-			request.headers.get("cookie")
-		)?.auth_session;
-		authInfo = authInfoStr ? JSON.parse(authInfoStr) : undefined;
-	} catch (err) {
-		console.error(err);
-	}
-
-	let loggedInUser, directusUserClient, userStr;
-	if (authInfo) {
-		try {
-			directusUserClient = await getDirectusUserClient(authInfo);
-			loggedInUser = await directusUserClient.users.me.read();
-			// get the current token to check whether the token has been refreshed
-			const accessToken = await directusUserClient.auth.token;
-			if (accessToken !== authInfo.access_token) {
-				// the token has been refreshed. save it in the cookie.
-				console.log("token refreshed.");
-				const newAuthInfo = {
-					access_token: directusUserClient.storage.auth_token,
-					refresh_token: directusUserClient.storage.auth_refresh_token,
-					expires: directusUserClient.storage.auth_expires,
-					expires_at: directusUserClient.storage.auth_expires_at,
-				};
-				// console.dir(newAuthInfo);
-				const cookieStr = cookie.serialize(
-					"auth_session",
-					JSON.stringify(newAuthInfo),
-					{
-						httpOnly: true,
-						secure: import.meta.env.NODE_ENV === "production",
-						expires: new Date(authInfo.expires_at),
-					}
-				);
-				// console.log("cookie str: ", cookieStr);
-				response.headers.append("Set-Cookie", cookieStr);
-			}
-
-			userStr = JSON.stringify(loggedInUser, null, 2);
-		} catch (err) {
-			// console.log("http response status:", err?.response?.status);
-			console.error(err);
-			if ([400, 401, 403].includes(err?.response?.status)) {
-				console.log("Invalid credentials. Removing the cookie.");
-				const removeCookieStr = cookie.serialize("auth_session", "", {
-					maxAge: -1,
-				});
-				response.headers.append("Set-Cookie", removeCookieStr);
-			}
+		const directusUserClient = await getDirectusUserClient(authInfo);
+		const loggedInUser = await directusUserClient.users.me.read();
+		// get the current token to check whether the token has been refreshed
+		const accessToken = await directusUserClient.auth.token;
+		if (accessToken !== authInfo.access_token) {
+			// the token has been refreshed. save it in the cookie.
+			console.log("token refreshed.");
+			authCookie.set(response, getStoredAuthInfo(directusUserClient));
 		}
-	}
 
-	return {
-		currentUser: loggedInUser,
-		directusClient: directusUserClient,
-	};
+		return {
+			currentUser: loggedInUser,
+			directusClient: directusUserClient,
+		};
+	} catch (err) {
+		// console.log("http response status:", err?.response?.status);
+		console.error(err);
+		if ([400, 401, 403].includes(err?.response?.status)) {
+			console.log("Invalid credentials. Removing the cookie.");
+			authCookie.unset(response);
+		}
+
+		return {};
+	}
 }
 
 const { currentUser, directusClient } = await currentDirectusUser(
@@ -75,10 +48,10 @@ const { currentUser, directusClient } = await currentDirectusUser(
 	Astro.response
 );
 
-let userStr, access_token_expires_at;
+let userStr, accessTokenExpiresAt;
 if (currentUser) {
 	userStr = JSON.stringify(currentUser, null, 2);
-	access_token_expires_at = directusClient.auth.storage.auth_expires_at;
+	accessTokenExpiresAt = getStoredAuthInfo(directusClient).expires_at;
 }
 ---
 
@@ -114,8 +87,7 @@ if (currentUser) {
 								<button type="submit">Logout</button>
 							</form>
 							<p>
-								Your auth token will expire on{" "}
-								{new Date(access_token_expires_at)}
+								Your auth token will expire on {new Date(accessTokenExpiresAt)}
 							</p>
 							<p>Your data as queried from Directus</p>
 							<pre>{userStr}</pre>
