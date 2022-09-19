@@ -1,35 +1,27 @@
 ---
-import DefaultLayout from '../layouts/DefaultLayout.astro'
-import Hero from '../components/Hero.astro'
-import Article from '../components/Article.astro'
-import { getDirectusClient } from '../utils/get-directus-client'
-import { formatRelativeTime } from '../../../shared/utils/format-relative-time'
+import DefaultLayout from "../layouts/DefaultLayout.astro";
+import { getDirectusAdminClient } from "../utils/get-directus-client";
 
-const directus = await getDirectusClient()
-const response = await directus.items("articles").readByQuery({
-  fields: ["*", "author.avatar", "author.first_name", "author.last_name"],
-  sort: "-publish_date",
-})
-const formattedArticles = response.data.map((article) => {
-  return {
-    ...article,
-    publish_date: formatRelativeTime(new Date(article.publish_date)),
-  }
-})
-const [hero, ...articles] = formattedArticles
+const directusAdmin = await getDirectusAdminClient();
+const admin = await directusAdmin.users.me.read();
 ---
 
+<style>
+	main {
+		margin-block-start: 10rem;
+	}
+</style>
+
 <DefaultLayout>
-  <main>
-    <section class="main-content">
-      <div class="container">
-        <Hero article={hero} />
-        <div class="articles-grid">
-          {articles.map((article, index) => (
-          <Article article={article} bordered={index !==articles.length - 1} />
-          ))}
-        </div>
-      </div>
-    </section>
-  </main>
+	<main>
+		<section class="main-content">
+			<div class="container">
+				<form method="post" action="/login">
+					<input type="hidden" name="email" value="test-user-1@example.com" />
+					<input type="hidden" name="password" value="password" />
+					<button type="submit">Login as Test User 1</button>
+				</form>
+			</div>
+		</section>
+	</main>
 </DefaultLayout>
