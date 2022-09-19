@@ -1,0 +1,10 @@
+{
+	"autorun": false,
+	"terminals": [
+		{
+			"name": "Directus Server",
+			"open": true,
+			"command": "cd directus; npm run start"
+		}
+	]
+}
