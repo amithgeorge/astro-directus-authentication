@@ -1,4 +1,4 @@
-import { Directus } from "@directus/sdk";
+import { Directus, MemoryStorage } from "@directus/sdk";
 
 export const getDirectusAdminClient = async () => {
 	const directus = new Directus(import.meta.env.PUBLIC_DIRECTUS_URL);
@@ -21,5 +21,20 @@ export const getDirectusAdminClient = async () => {
 
 export async function getDirectusDefaultClient() {
 	const directus = new Directus(import.meta.env.PUBLIC_DIRECTUS_URL);
+	return directus;
+}
+
+export async function getDirectusUserClient(authInfo) {
+	const storage = new MemoryStorage();
+	if (authInfo) {
+		storage.auth_token = authInfo.access_token;
+		storage.auth_refresh_token = authInfo.refresh_token;
+		storage.auth_expires = authInfo.expires;
+		storage.auth_expires_at = authInfo.expires_at;
+	}
+
+	const directus = new Directus(import.meta.env.PUBLIC_DIRECTUS_URL, {
+		storage: storage,
+	});
 	return directus;
 }

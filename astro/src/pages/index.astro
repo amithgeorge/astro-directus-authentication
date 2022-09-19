@@ -1,16 +1,25 @@
 ---
 import cookie from "cookie";
 import DefaultLayout from "../layouts/DefaultLayout.astro";
-import { getDirectusAdminClient } from "../utils/get-directus-client";
+import {
+	getDirectusAdminClient,
+	getDirectusUserClient,
+} from "../utils/get-directus-client";
 
-const directusAdmin = await getDirectusAdminClient();
-const admin = await directusAdmin.users.me.read();
+// const directusAdmin = await getDirectusAdminClient();
+// const admin = await directusAdmin.users.me.read();
 
 const authInfoStr = cookie.parse(
 	Astro.request.headers.get("cookie")
 )?.auth_session;
 const authInfo = authInfoStr ? JSON.parse(authInfoStr) : undefined;
 const loggedIn = !!authInfo;
+let loggedInUser, directusUserClient, userStr;
+if (authInfo) {
+	directusUserClient = await getDirectusUserClient(authInfo);
+	loggedInUser = await directusUserClient.users.me.read();
+	userStr = JSON.stringify(loggedInUser, null, 2);
+}
 ---
 
 <style>
@@ -44,6 +53,8 @@ const loggedIn = !!authInfo;
 							<p>
 								Your auth token will expire on {new Date(authInfo.expires_at)}
 							</p>
+							<p>Your data as queried from Directus</p>
+							<pre>{userStr}</pre>
 						</div>
 					)
 				}
