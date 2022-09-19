@@ -2,9 +2,19 @@
 	"autorun": false,
 	"terminals": [
 		{
-			"name": "Directus Server",
+			"name": "Directus server",
 			"open": true,
 			"command": "cd directus; npm run start"
+		},
+		{
+			"name": "Astro dev server",
+			"open": true,
+			"command": "cd astro; npm run dev"
+		},
+		{
+			"name": "Astro prod server",
+			"open": true,
+			"command": "cd astro; npx serve -p 8080 dist/"
 		}
 	]
 }
