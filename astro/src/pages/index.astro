@@ -1,6 +1,6 @@
 ---
-import cookie from "cookie";
 import DefaultLayout from "../layouts/DefaultLayout.astro";
+import cookie from "cookie";
 import {
 	getDirectusAdminClient,
 	getDirectusUserClient,
@@ -13,18 +13,30 @@ const authInfoStr = cookie.parse(
 	Astro.request.headers.get("cookie")
 )?.auth_session;
 const authInfo = authInfoStr ? JSON.parse(authInfoStr) : undefined;
-const loggedIn = !!authInfo;
+
 let loggedInUser, directusUserClient, userStr;
 if (authInfo) {
-	directusUserClient = await getDirectusUserClient(authInfo);
-	loggedInUser = await directusUserClient.users.me.read();
-	userStr = JSON.stringify(loggedInUser, null, 2);
+	try {
+		directusUserClient = await getDirectusUserClient(authInfo);
+		loggedInUser = await directusUserClient.users.me.read();
+		userStr = JSON.stringify(loggedInUser, null, 2);
+	} catch (err) {
+		// console.log("http response status:", err?.response?.status);
+		console.error(err);
+		if ([400, 401, 403].includes(err?.response?.status)) {
+			console.log("Invalid credentials. Removing the cookie.");
+			const removeCookieStr = cookie.serialize("auth_session", "", {
+				maxAge: -1,
+			});
+			Astro.response.headers.append("Set-Cookie", removeCookieStr);
+		}
+	}
 }
 ---
 
 <style>
 	main {
-		margin-block-start: 10rem;
+		margin-block-start: 2rem;
 	}
 </style>
 
@@ -33,7 +45,7 @@ if (authInfo) {
 		<section class="main-content">
 			<div class="container">
 				{
-					!loggedIn && (
+					!loggedInUser && (
 						<form method="post" action="/login">
 							<input
 								type="hidden"
@@ -47,7 +59,7 @@ if (authInfo) {
 				}
 
 				{
-					loggedIn && (
+					loggedInUser && (
 						<div>
 							<h2>You are logged in</h2>
 							<p>

@@ -1,6 +1,7 @@
 ---
 import "modern-normalize";
 import "../../../shared/stylesheet/main.css";
+import Header from "$src/components/Header.astro";
 import Footer from "../components/Footer.astro";
 ---
 
@@ -25,6 +26,7 @@ import Footer from "../components/Footer.astro";
 	</head>
 
 	<body class="layout">
+		<Header />
 		<slot />
 		<Footer />
 	</body>
