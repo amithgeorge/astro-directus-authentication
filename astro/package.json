@@ -1,20 +1,22 @@
 {
-  "name": "directus-astro-example",
-  "private": true,
-  "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview"
-  },
-  "dependencies": {
-    "@directus/sdk": "9.12.2",
-    "cookie": "^0.5.0"
-  },
-  "devDependencies": {
-    "@astrojs/vue": "^1.0.0",
-    "astro": "^1.2.6",
-    "modern-normalize": "1.1.0",
-    "vue": "3.2.37"
-  }
+	"name": "directus-astro-example",
+	"private": true,
+	"scripts": {
+		"dev": "astro dev",
+		"start": "astro dev",
+		"build": "astro build",
+		"preview": "astro preview"
+	},
+	"type": "module",
+	"dependencies": {
+		"@directus/sdk": "9.12.2",
+		"cookie": "^0.5.0"
+	},
+	"devDependencies": {
+		"@astrojs/vue": "^1.0.0",
+		"astro": "^1.2.6",
+		"dotenv": "^16.0.2",
+		"modern-normalize": "1.1.0",
+		"vue": "3.2.37"
+	}
 }

@@ -8,6 +8,7 @@ import { currentDirectusUser } from "$src/utils/auth.js";
 
 // const directusAdmin = await getDirectusAdminClient();
 // const admin = await directusAdmin.users.me.read();
+// console.dir(admin, { depth: 5 });
 
 const { currentUser, directusClient } = await currentDirectusUser(
 	Astro.request,

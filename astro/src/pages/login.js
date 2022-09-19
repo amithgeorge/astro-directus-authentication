@@ -9,7 +9,7 @@ export async function post({ request, params }) {
 
 	const home = new URL("/", request.url);
 	const response = Response.redirect(home, 302);
-	authCookie.set(response, authInfo);
+	await authCookie.set(response, authInfo);
 
 	return response;
 }

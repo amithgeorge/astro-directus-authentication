@@ -24,7 +24,7 @@ export async function currentDirectusUser(request, response) {
 		const isRefreshed = await isAuthTokenRefreshed(directus, authInfo);
 		if (isRefreshed) {
 			console.log("token refreshed.");
-			authCookie.set(response, getStoredAuthInfo(directus));
+			await authCookie.set(response, getStoredAuthInfo(directus));
 		}
 
 		return {
