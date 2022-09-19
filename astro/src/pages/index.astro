@@ -4,63 +4,81 @@ import cookie from "cookie";
 import {
 	getDirectusAdminClient,
 	getDirectusUserClient,
-} from "../utils/get-directus-client";
+} from "$src/utils/directus-client.js";
 
 // const directusAdmin = await getDirectusAdminClient();
 // const admin = await directusAdmin.users.me.read();
 
-let authInfo;
-try {
-	const authInfoStr = cookie.parse(
-		Astro.request.headers.get("cookie")
-	)?.auth_session;
-	authInfo = authInfoStr ? JSON.parse(authInfoStr) : undefined;
-} catch (err) {
-	console.error(err);
-}
-
-let loggedInUser, directusUserClient, userStr;
-if (authInfo) {
+async function currentDirectusUser(request, response) {
+	let authInfo;
 	try {
-		directusUserClient = await getDirectusUserClient(authInfo);
-		loggedInUser = await directusUserClient.users.me.read();
-		// get the current token to check whether the token has been refreshed
-		const accessToken = await directusUserClient.auth.token;
-		if (accessToken !== authInfo.access_token) {
-			// the token has been refreshed. save it in the cookie.
-			console.log("token refreshed.");
-			const newAuthInfo = {
-				access_token: directusUserClient.storage.auth_token,
-				refresh_token: directusUserClient.storage.auth_refresh_token,
-				expires: directusUserClient.storage.auth_expires,
-				expires_at: directusUserClient.storage.auth_expires_at,
-			};
-			// console.dir(newAuthInfo);
-			const cookieStr = cookie.serialize(
-				"auth_session",
-				JSON.stringify(newAuthInfo),
-				{
-					httpOnly: true,
-					secure: import.meta.env.NODE_ENV === "production",
-					expires: new Date(authInfo.expires_at),
-				}
-			);
-			// console.log("cookie str: ", cookieStr);
-			Astro.response.headers.append("Set-Cookie", cookieStr);
-		}
-
-		userStr = JSON.stringify(loggedInUser, null, 2);
+		const authInfoStr = cookie.parse(
+			request.headers.get("cookie")
+		)?.auth_session;
+		authInfo = authInfoStr ? JSON.parse(authInfoStr) : undefined;
 	} catch (err) {
-		// console.log("http response status:", err?.response?.status);
 		console.error(err);
-		if ([400, 401, 403].includes(err?.response?.status)) {
-			console.log("Invalid credentials. Removing the cookie.");
-			const removeCookieStr = cookie.serialize("auth_session", "", {
-				maxAge: -1,
-			});
-			Astro.response.headers.append("Set-Cookie", removeCookieStr);
+	}
+
+	let loggedInUser, directusUserClient, userStr;
+	if (authInfo) {
+		try {
+			directusUserClient = await getDirectusUserClient(authInfo);
+			loggedInUser = await directusUserClient.users.me.read();
+			// get the current token to check whether the token has been refreshed
+			const accessToken = await directusUserClient.auth.token;
+			if (accessToken !== authInfo.access_token) {
+				// the token has been refreshed. save it in the cookie.
+				console.log("token refreshed.");
+				const newAuthInfo = {
+					access_token: directusUserClient.storage.auth_token,
+					refresh_token: directusUserClient.storage.auth_refresh_token,
+					expires: directusUserClient.storage.auth_expires,
+					expires_at: directusUserClient.storage.auth_expires_at,
+				};
+				// console.dir(newAuthInfo);
+				const cookieStr = cookie.serialize(
+					"auth_session",
+					JSON.stringify(newAuthInfo),
+					{
+						httpOnly: true,
+						secure: import.meta.env.NODE_ENV === "production",
+						expires: new Date(authInfo.expires_at),
+					}
+				);
+				// console.log("cookie str: ", cookieStr);
+				response.headers.append("Set-Cookie", cookieStr);
+			}
+
+			userStr = JSON.stringify(loggedInUser, null, 2);
+		} catch (err) {
+			// console.log("http response status:", err?.response?.status);
+			console.error(err);
+			if ([400, 401, 403].includes(err?.response?.status)) {
+				console.log("Invalid credentials. Removing the cookie.");
+				const removeCookieStr = cookie.serialize("auth_session", "", {
+					maxAge: -1,
+				});
+				response.headers.append("Set-Cookie", removeCookieStr);
+			}
 		}
 	}
+
+	return {
+		currentUser: loggedInUser,
+		directusClient: directusUserClient,
+	};
+}
+
+const { currentUser, directusClient } = await currentDirectusUser(
+	Astro.request,
+	Astro.response
+);
+
+let userStr, access_token_expires_at;
+if (currentUser) {
+	userStr = JSON.stringify(currentUser, null, 2);
+	access_token_expires_at = directusClient.auth.storage.auth_expires_at;
 }
 ---
 
@@ -75,7 +93,7 @@ if (authInfo) {
 		<section class="main-content">
 			<div class="container">
 				{
-					!loggedInUser && (
+					!currentUser && (
 						<form method="post" action="/login">
 							<input
 								type="hidden"
@@ -89,11 +107,15 @@ if (authInfo) {
 				}
 
 				{
-					loggedInUser && (
+					currentUser && (
 						<div>
 							<h2>You are logged in</h2>
+							<form method="post" action="/logout">
+								<button type="submit">Logout</button>
+							</form>
 							<p>
-								Your auth token will expire on {new Date(authInfo.expires_at)}
+								Your auth token will expire on{" "}
+								{new Date(access_token_expires_at)}
 							</p>
 							<p>Your data as queried from Directus</p>
 							<pre>{userStr}</pre>

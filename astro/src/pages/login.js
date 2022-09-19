@@ -1,4 +1,4 @@
-import { getDirectusDefaultClient } from "$src/utils/get-directus-client.js";
+import { getDirectusDefaultClient } from "$src/utils/directus-client.js";
 import cookie from "cookie";
 
 export async function post({ request, params }) {
