@@ -9,16 +9,46 @@ import {
 // const directusAdmin = await getDirectusAdminClient();
 // const admin = await directusAdmin.users.me.read();
 
-const authInfoStr = cookie.parse(
-	Astro.request.headers.get("cookie")
-)?.auth_session;
-const authInfo = authInfoStr ? JSON.parse(authInfoStr) : undefined;
+let authInfo;
+try {
+	const authInfoStr = cookie.parse(
+		Astro.request.headers.get("cookie")
+	)?.auth_session;
+	authInfo = authInfoStr ? JSON.parse(authInfoStr) : undefined;
+} catch (err) {
+	console.error(err);
+}
 
 let loggedInUser, directusUserClient, userStr;
 if (authInfo) {
 	try {
 		directusUserClient = await getDirectusUserClient(authInfo);
 		loggedInUser = await directusUserClient.users.me.read();
+		// get the current token to check whether the token has been refreshed
+		const accessToken = await directusUserClient.auth.token;
+		if (accessToken !== authInfo.access_token) {
+			// the token has been refreshed. save it in the cookie.
+			console.log("token refreshed.");
+			const newAuthInfo = {
+				access_token: directusUserClient.storage.auth_token,
+				refresh_token: directusUserClient.storage.auth_refresh_token,
+				expires: directusUserClient.storage.auth_expires,
+				expires_at: directusUserClient.storage.auth_expires_at,
+			};
+			// console.dir(newAuthInfo);
+			const cookieStr = cookie.serialize(
+				"auth_session",
+				JSON.stringify(newAuthInfo),
+				{
+					httpOnly: true,
+					secure: import.meta.env.NODE_ENV === "production",
+					expires: new Date(authInfo.expires_at),
+				}
+			);
+			// console.log("cookie str: ", cookieStr);
+			Astro.response.headers.append("Set-Cookie", cookieStr);
+		}
+
 		userStr = JSON.stringify(loggedInUser, null, 2);
 	} catch (err) {
 		// console.log("http response status:", err?.response?.status);
