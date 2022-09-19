@@ -4,7 +4,7 @@
 		{
 			"name": "Directus server",
 			"open": true,
-			"command": "cd directus; npm run start"
+			"command": "(cd directus; npm run start)"
 		},
 		{
 			"name": "Astro dev server",
