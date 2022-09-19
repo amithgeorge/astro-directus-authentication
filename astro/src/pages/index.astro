@@ -1,9 +1,16 @@
 ---
+import cookie from "cookie";
 import DefaultLayout from "../layouts/DefaultLayout.astro";
 import { getDirectusAdminClient } from "../utils/get-directus-client";
 
 const directusAdmin = await getDirectusAdminClient();
 const admin = await directusAdmin.users.me.read();
+
+const authInfoStr = cookie.parse(
+	Astro.request.headers.get("cookie")
+)?.auth_session;
+const authInfo = authInfoStr ? JSON.parse(authInfoStr) : undefined;
+const loggedIn = !!authInfo;
 ---
 
 <style>
@@ -16,11 +23,30 @@ const admin = await directusAdmin.users.me.read();
 	<main>
 		<section class="main-content">
 			<div class="container">
-				<form method="post" action="/login">
-					<input type="hidden" name="email" value="test-user-1@example.com" />
-					<input type="hidden" name="password" value="password" />
-					<button type="submit">Login as Test User 1</button>
-				</form>
+				{
+					!loggedIn && (
+						<form method="post" action="/login">
+							<input
+								type="hidden"
+								name="email"
+								value="test-user-1@example.com"
+							/>
+							<input type="hidden" name="password" value="password" />
+							<button type="submit">Login as Test User 1</button>
+						</form>
+					)
+				}
+
+				{
+					loggedIn && (
+						<div>
+							<h2>You are logged in</h2>
+							<p>
+								Your auth token will expire on {new Date(authInfo.expires_at)}
+							</p>
+						</div>
+					)
+				}
 			</div>
 		</section>
 	</main>
