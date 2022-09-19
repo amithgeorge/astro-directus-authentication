@@ -33,6 +33,11 @@ export async function login({ email, password }) {
 	return authInfo;
 }
 
+export async function isAuthTokenRefreshed(directus, authInfo) {
+	const currentToken = await directus.auth.token;
+	return authInfo.access_token !== currentToken;
+}
+
 export function getStoredAuthInfo(directusClient) {
 	const authInfo = {
 		access_token: directusClient.storage.auth_token,

@@ -2,46 +2,12 @@
 import DefaultLayout from "../layouts/DefaultLayout.astro";
 import {
 	getDirectusAdminClient,
-	getDirectusUserClient,
 	getStoredAuthInfo,
 } from "$src/utils/directus-client.js";
-import * as authCookie from "$src/utils/auth-cookie.js";
+import { currentDirectusUser } from "$src/utils/auth.js";
 
 // const directusAdmin = await getDirectusAdminClient();
 // const admin = await directusAdmin.users.me.read();
-
-async function currentDirectusUser(request, response) {
-	const authInfo = authCookie.read(request);
-	if (!authInfo) {
-		return {};
-	}
-
-	try {
-		const directusUserClient = await getDirectusUserClient(authInfo);
-		const loggedInUser = await directusUserClient.users.me.read();
-		// get the current token to check whether the token has been refreshed
-		const accessToken = await directusUserClient.auth.token;
-		if (accessToken !== authInfo.access_token) {
-			// the token has been refreshed. save it in the cookie.
-			console.log("token refreshed.");
-			authCookie.set(response, getStoredAuthInfo(directusUserClient));
-		}
-
-		return {
-			currentUser: loggedInUser,
-			directusClient: directusUserClient,
-		};
-	} catch (err) {
-		// console.log("http response status:", err?.response?.status);
-		console.error(err);
-		if ([400, 401, 403].includes(err?.response?.status)) {
-			console.log("Invalid credentials. Removing the cookie.");
-			authCookie.unset(response);
-		}
-
-		return {};
-	}
-}
 
 const { currentUser, directusClient } = await currentDirectusUser(
 	Astro.request,
